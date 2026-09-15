@@ -40,16 +40,16 @@ class SkillInstallation(unittest.TestCase):
             target = dest / "earnings-review"
             target.mkdir(parents=True)
             custom = target / "SKILL.md"
-            custom.write_text("my customization")
+            custom.write_text("my customization", encoding="utf-8")
             result = self.install(dest)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(custom.read_text(), "my customization")
+            self.assertEqual(custom.read_text(encoding="utf-8"), "my customization")
             result = self.install(dest, "--replace")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertNotEqual(custom.read_text(), "my customization")
+            self.assertNotEqual(custom.read_text(encoding="utf-8"), "my customization")
             backups = list((dest / ".berkshire-backups").glob("*/earnings-review/SKILL.md"))
             self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_text(), "my customization")
+            self.assertEqual(backups[0].read_text(encoding="utf-8"), "my customization")
 
     def test_unknown_skill_does_not_write_anything(self):
         with tempfile.TemporaryDirectory() as temp:
