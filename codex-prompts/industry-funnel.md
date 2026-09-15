@@ -5,7 +5,7 @@ argument-hint: $ARGUMENTS
 
 Use the installed AI Berkshire Codex skill `industry-funnel` for this request.
 
-If the skill is not already loaded, read and follow `~/ai-berkshire/codex-skills/industry-funnel/SKILL.md`.
+If the skill is not already loaded, read and follow the installed `industry-funnel/SKILL.md` using the current skill catalog, or locate the actual checkout and read `codex-skills/industry-funnel/SKILL.md`. Do not assume a fixed home-directory checkout.
 
 User arguments:
 $ARGUMENTS

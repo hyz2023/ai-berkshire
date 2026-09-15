@@ -1,3 +1,5 @@
+> **本 fork：Codex + 富途投研增强版。** 已修复空抽检/缺证误放行、负值和零值校验、十进制表达式计算及退出码；安装支持保留、备份和随包工具。先读 [使用与校验指南](docs/fork-guide.md)。下方原项目报告与业绩展示保留为上游资料，不代表本 fork 的收益记录或本次验证结论。
+
 中文 | [English](README_EN.md) | [日本語](README_JA.md)
 
 [![GitHub Trending](https://trendshift.io/api/badge/repositories/63696)](https://trendshift.io/repositories/63696)

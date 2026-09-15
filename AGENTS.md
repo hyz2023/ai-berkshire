@@ -3,6 +3,21 @@
 This repository contains investment research workflows, reports, and shared
 validation tools. Keep compatibility with both Claude Code and Codex users.
 
+## Fork defaults: Codex + Futu research
+
+- Read `docs/fork-guide.md` for data provenance, audit semantics and installation.
+- Default to Chinese reports and save new personal research under ignored
+  `local/research/`. Do not infer holdings, risk tolerance or position sizes.
+- Use available Futu read-only tools for quotes/news; verify key fundamentals
+  against original filings. Discover actual tools/skills before calling them.
+- Research authorization does not authorize order placement or other trading.
+- Use actual Codex capabilities: no Claude configuration checks in Codex.
+  Schedule four research roles within available capacity, in batches if needed.
+- A failed or incomplete audit blocks treating research as verified. PASS only
+  covers numeric consistency of the supplied sample, not authenticity or coverage.
+- Verify all decision-critical inputs, not only the random sample. Preserve
+  currency, period, basis, timestamps, original links and page/API locators.
+
 ## Project Layout
 
 - `skills/*.md`: Claude Code slash-command source files.

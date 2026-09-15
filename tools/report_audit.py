@@ -5,7 +5,7 @@
 通过则准出，不通过则打回并说明原因。
 
 Zero external dependencies — uses only Python stdlib.
-Requires Python >= 3.7.
+Requires Python >= 3.9.
 
 工作流程（三步）：
   Step 1 — 提取数据点，随机抽样15%：
@@ -22,6 +22,7 @@ Requires Python >= 3.7.
 """
 
 import argparse
+import contextlib
 import json
 import math
 import os
@@ -29,6 +30,10 @@ import re
 import sys
 from decimal import Decimal, Context, ROUND_HALF_EVEN
 from random import Random
+if __package__:
+    from .financial_rigor import exact
+else:
+    from financial_rigor import exact
 
 _CTX = Context(prec=28, rounding=ROUND_HALF_EVEN)
 
@@ -161,7 +166,7 @@ def _parse_md_tables(lines: list) -> list:
                         if m:
                             val = _clean_num(m.group(1))
                             unit = (m.group(2) or '').strip()
-                            if val is not None and val != 0 and abs(val) < 1e15:
+                            if val is not None and abs(val) < 1e15:
                                 results.append((row_label, col_header, val, unit, i + 1, dline))
                     i += 1
                 continue
@@ -187,7 +192,7 @@ def extract_data_points(md_text: str) -> list:
         label = re.sub(r'[\*_`]+', '', label).strip()
         if not _is_valid_label(label):
             return
-        if val is None or val == 0 or abs(val) > 1e15:
+        if val is None or abs(val) > 1e15:
             return
         # 过滤纯年份/季度
         if re.fullmatch(r'(20\d{2}|Q[1-4]|\d{4}\s*Q[1-4])', label.strip()):
@@ -257,162 +262,89 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 # 准出/打回判决
 # ---------------------------------------------------------------------------
 
-_TOLERANCE = 0.01   # 1% 容差
+_TOLERANCE = Decimal("0.01")  # 1%; values must already share currency/period/basis.
 
 
-def _pct_diff(reported: float, fetched: float) -> float:
-    """相对偏差 (absolute)。"""
+def _pct_diff(reported, fetched):
+    """Absolute relative deviation, including a defined zero-reference policy."""
+    reported, fetched = exact(reported), exact(fetched)
     if reported == 0:
-        return 0.0 if fetched == 0 else float('inf')
-    return abs(reported - fetched) / abs(reported)
+        return Decimal(0) if fetched == 0 else Decimal("Infinity")
+    return _CTX.divide(abs(reported - fetched), abs(reported))
 
 
 def render_verdict(results: list, report_name: str = "") -> dict:
+    """Require every supplied item to have two distinct named, matching sources.
+
+    PASS means numeric checks on the supplied sample passed, not that sources
+    were fetched, independently authenticated, or the entire report audited.
+    FAIL takes precedence over INCOMPLETE when a known mismatch exists.
     """
-    根据核验结果输出准出/打回判决。
-
-    results: list of dict，每项包含：
-      - id, label, reported_value, unit, fetched_value, fetched_source
-      - (可选) fetched_value2, fetched_source2   ← 第二来源
-
-    返回：
-      {
-        'verdict': 'PASS' | 'FAIL',
-        'pass_count': int,
-        'fail_count': int,
-        'total': int,
-        'fail_items': [...],
-        'summary': str,
-      }
-    """
-    BOLD = '\033[1m'
-    RED = '\033[91m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RESET = '\033[0m'
-
-    print('=' * 70)
-    print(f'{BOLD}报告数据抽检 — 准出/打回判决{RESET}')
-    if report_name:
-        print(f'报告：{report_name}')
-    print('=' * 70)
-    print()
-
-    fail_items = []
-    warn_items = []
-
-    for item in results:
-        label = item.get('label', '?')
-        reported = float(item.get('reported_value', 0))
-        unit = item.get('unit', '')
-        fetched = item.get('fetched_value')
-        source = item.get('fetched_source', '?')
-        fetched2 = item.get('fetched_value2')
-        source2 = item.get('fetched_source2', '')
-
-        # --- 主来源比对 ---
-        if fetched is None:
-            # 没有提供核验值 → 跳过（不计入通过/失败）
-            print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s} {reported:>12.2f} {unit}  →  [未提供核验值，跳过]')
+    if not isinstance(results, list):
+        raise ValueError("核验结果必须是 JSON 数组")
+    print("报告数据抽检 — " + (report_name or "未命名报告"))
+    fail_items, incomplete_items = [], []
+    pass_count = 0
+    seen_ids = set()
+    for index, item in enumerate(results, 1):
+        if not isinstance(item, dict):
+            incomplete_items.append({"id": index, "reason": "数据项必须是对象"})
             continue
-
-        fetched = float(fetched)
-        diff1 = _pct_diff(reported, fetched)
-
-        # --- 第二来源比对（如有）---
-        diff2 = None
-        if fetched2 is not None:
-            fetched2 = float(fetched2)
-            diff2 = _pct_diff(reported, fetched2)
-
-        # 判断
-        pass1 = diff1 <= _TOLERANCE
-        pass2 = (diff2 is None) or (diff2 <= _TOLERANCE)
-
-        if pass1 and pass2:
-            status = f'{GREEN}✅ 通过{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
-            if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
-        elif not pass1 and not pass2:
-            status = f'{RED}❌ 不通过{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
-            if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
-            fail_items.append({
-                'id': item['id'],
-                'label': label,
-                'reported': reported,
-                'unit': unit,
-                'fetched': fetched,
-                'source': source,
-                'fetched2': fetched2,
-                'source2': source2,
-                'diff1_pct': round(diff1 * 100, 2),
-                'diff2_pct': round(diff2 * 100, 2) if diff2 is not None else None,
-                'raw_text': item.get('raw_text', ''),
-                'line_number': item.get('line_number', 0),
-            })
+        label = str(item.get("label", "?"))
+        item_id = item.get("id")
+        missing, mismatches = [], []
+        if type(item_id) is not int or item_id in seen_ids:
+            missing.append("缺少有效且唯一的整数 id")
         else:
-            # 一个来源通过，一个不通过 → 警告，不计入失败
-            status = f'{YELLOW}⚠️  警告{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
-            if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
-            warn_items.append({
-                'id': item['id'], 'label': label,
-                'reported': reported, 'unit': unit,
-                'diff1_pct': round(diff1 * 100, 2),
-                'diff2_pct': round(diff2 * 100, 2) if diff2 is not None else None,
-            })
+            seen_ids.add(item_id)
+        try:
+            reported = exact(item.get("reported_value"))
+        except ValueError:
+            reported = None
+            missing.append("报告值缺失或非有限数值")
+        names = []
+        for suffix in ("", "2"):
+            name = item.get("fetched_source" + suffix, "")
+            name = name.strip() if isinstance(name, str) else ""
+            if not name:
+                missing.append("缺少来源名称" + suffix)
+            names.append(name.casefold())
+            try:
+                fetched = exact(item.get("fetched_value" + suffix))
+            except ValueError:
+                missing.append("核验值缺失或非有限数值" + suffix)
+                continue
+            if reported is not None:
+                diff = _pct_diff(reported, fetched)
+                if diff > _TOLERANCE:
+                    mismatches.append(f"{name or '未命名来源'}: 偏差 {diff * 100:.2f}% > 1%")
+        if names[0] and names[0] == names[1]:
+            missing.append("两来源名称重复，不能视为独立核验")
+        detail = {"id": item_id, "label": label,
+                  "line_number": item.get("line_number", 0),
+                  "reason": "; ".join(mismatches + missing)}
+        if mismatches:
+            fail_items.append(detail)
+            print(f"❌ {label}: {detail['reason']}")
+        elif missing:
+            incomplete_items.append(detail)
+            print(f"⬜ {label}: {detail['reason']}")
+        else:
+            pass_count += 1
+            print(f"✅ {label}: 两个具名来源数值均在 1% 容差内")
 
-        print(f'  {status} [{item["id"]:>2}] {label[:35]:35s}  报告: {reported:>12.2f} {unit}')
-        print(f'              {" " * 38}{detail}')
-
-    print()
-    print('-' * 70)
-
-    total = len([r for r in results if r.get('fetched_value') is not None])
-    fail_count = len(fail_items)
-    warn_count = len(warn_items)
-    pass_count = total - fail_count - warn_count
-
-    print(f'  抽检总数: {total}  |  通过: {GREEN}{pass_count}{RESET}  |  警告: {YELLOW}{warn_count}{RESET}  |  不通过: {RED}{fail_count}{RESET}')
-    print()
-
-    if fail_count == 0:
-        print(f'{BOLD}{GREEN}【准出】所有抽检数据通过，报告可发布。{RESET}')
-        verdict = 'PASS'
-    else:
-        print(f'{BOLD}{RED}【打回】{fail_count} 个数据点核验不通过，报告需修正后重审。{RESET}')
-        print()
-        print(f'{BOLD}打回原因：{RESET}')
-        for fi in fail_items:
-            print(f'  ❌ 第 {fi["line_number"]} 行 | {fi["label"]}')
-            print(f'     报告值：{fi["reported"]} {fi["unit"]}')
-            print(f'     {fi["source"]}：{fi["fetched"]}  （偏差 {fi["diff1_pct"]}%）')
-            if fi.get('fetched2') is not None:
-                print(f'     {fi["source2"]}：{fi["fetched2"]}  （偏差 {fi["diff2_pct"]}%）')
-            print(f'     原文：{fi["raw_text"][:80]}')
-            print()
-        verdict = 'FAIL'
-
-    if warn_count > 0:
-        print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过1%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
-        for wi in warn_items:
-            print(f'  ⚠️  {wi["label"]}  报告:{wi["reported"]} {wi["unit"]}  偏差: {wi["diff1_pct"]}% / {wi["diff2_pct"]}%')
-
-    print('=' * 70)
-
-    return {
-        'verdict': verdict,
-        'pass_count': pass_count,
-        'warn_count': warn_count,
-        'fail_count': fail_count,
-        'total': total,
-        'fail_items': fail_items,
-        'warn_items': warn_items,
+    verdict = ("FAIL" if fail_items else
+               "INCOMPLETE" if not results or incomplete_items else "PASS")
+    messages = {
+        "PASS": "【数值核验通过】所提供样本全部通过；来源真实性、独立性、口径与全文仍需复核。",
+        "FAIL": "【打回】存在数值不一致，修正并重新核验前不得发布。",
+        "INCOMPLETE": "【核验不完整】样本为空或证据不足，不得按已核验报告发布。",
     }
+    print(messages[verdict])
+    return {"verdict": verdict, "pass_count": pass_count, "warn_count": 0,
+            "fail_count": len(fail_items), "incomplete_count": len(incomplete_items),
+            "total": len(results), "fail_items": fail_items, "warn_items": [],
+            "incomplete_items": incomplete_items}
 
 
 # ---------------------------------------------------------------------------
@@ -522,8 +454,8 @@ def main():
                     'raw_text': p['raw_text'],
                     'fetched_value': None,       # ← 填入主来源核验值
                     'fetched_source': '',        # ← 填入主来源名称
-                    'fetched_value2': None,      # ← 填入副来源核验值（可选）
-                    'fetched_source2': '',       # ← 填入副来源名称（可选）
+                    'fetched_value2': None,      # ← 填入副来源核验值（必填）
+                    'fetched_source2': '',       # ← 填入副来源名称（必填）
                 })
             print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
             print()
@@ -531,13 +463,16 @@ def main():
 
     elif args.command == 'verdict':
         try:
-            results = json.loads(args.results)
-        except json.JSONDecodeError as e:
+            results = json.loads(args.results, parse_float=Decimal)
+            if not isinstance(results, list):
+                raise ValueError("核验结果必须是 JSON 数组")
+        except ValueError as e:
             print(f'❌ JSON 解析失败: {e}', file=sys.stderr)
             sys.exit(1)
 
         report_name = args.report or ''
-        outcome = render_verdict(results, report_name=report_name)
+        with contextlib.redirect_stdout(sys.stderr if args.output_json else sys.stdout):
+            outcome = render_verdict(results, report_name=report_name)
 
         if args.output_json:
             print(json.dumps(outcome, ensure_ascii=False, indent=2))

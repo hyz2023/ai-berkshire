@@ -3,15 +3,58 @@ name: investment-research
 description: "AI Berkshire skill: 投资研究：巴菲特-芒格-段永平-李录 四大师综合分析框架. Source: skills/investment-research.md."
 ---
 
-## Codex adapter note
+## Codex runtime rules (override Claude-specific mechanics below)
 
-This skill is generated from `skills/investment-research.md` so Claude Code and Codex users share one canonical workflow.
+Generated from `skills/investment-research.md`. Preserve its research questions; apply
+these rules instead of conflicting runtime, permission, output or sizing steps.
 
-- Treat `$ARGUMENTS` as the user's request in the current Codex thread.
-- When the source mentions Claude-only surfaces such as Task, Agent, WebSearch, Bash, Read, or Write, use the closest Codex capability available in this session: subagents when available, web search when needed, shell commands for local tools, and normal file edits for workspace files.
-- Use shared project tools from `tools/` in this repository. Prefer running commands from the repository root with paths like `python3 tools/financial_rigor.py ...`; if the current thread starts outside the repo, locate the actual checkout path first instead of assuming a fixed home-directory path.
-- Before starting research, run the `date` command to confirm today's date; treat it as the baseline for "latest" data and state the data cutoff date in the report header. Never assume the current date from training data.
-- Preserve the research quality rules from `AGENTS.md`: cross-check financial data, use exact arithmetic tools for valuation/math, and clearly label uncertainty and source gaps.
+- Treat `$ARGUMENTS` as the current user request. An explicit request to run this
+  research already authorizes its ordinary research steps: show the plan and
+  proceed; do not require a second confirmation of team structure.
+- **Web preflight:** perform one actual read-only search/fetch with an available
+  Codex tool and inspect the result before delegating. Do not read `.claude/`
+  settings, require a `WebSearch` whitelist, or change permissions in Codex.
+  On failure report the exact limitation; use provided primary documents or
+  return a source-gap report. Never claim fresh data from training knowledge.
+- **Team mapping:** use available subagent/message/wait capabilities, not literal
+  `TeamCreate`, `TaskCreate`, `TaskUpdate`, `TeamDelete` or `shutdown_request`.
+  Respect the actual capacity INCLUDING the lead. Run four research roles in
+  batches when four children cannot run together; if no subagents are available,
+  perform four clearly separated role analyses sequentially and disclose that.
+  Do not claim independent agents when a single agent did the work.
+- **Tool base:** resolve paths relative to the loaded SKILL.md. For installed
+  packages, use `references/runtime/` as the base for `tools/`, `skills/`,
+  `AGENTS.md` and `docs/fork-guide.md`. For a checkout, use the repository root.
+  Use absolute paths or set command cwd to that base. Do not assume
+  `~/ai-berkshire` exists. Read the fork guide and AGENTS.md before research.
+  The bundle supports core calculation/audit; data-dependent auxiliary tools
+  may still require the full checkout and external services.
+- **Workspace:** resolve the user's project directory before running tools;
+  save new personal reports and raw evidence to that project's ignored
+  `local/research/<company>/<date>/`, not the skill installation directory or
+  a hard-coded home-directory report path.
+  When tool cwd is the runtime base, pass absolute project/report/output paths
+  so relative report arguments cannot resolve inside the installation.
+- Confirm the actual current date/time and label data cutoff, price timestamp,
+  market timezone, currency, period and accounting basis. Default to Chinese.
+- **Futu:** discover callable Futu tools or read the installed futuapi skill.
+  Use supported read-only quotes/news/financials when available; reconcile key
+  fundamentals to original filings. Preserve provenance and timestamps.
+  If unavailable, disclose it and use original filings plus an available second
+  source. Research never authorizes trading or account mutations.
+- **Evidence:** two copied articles are not independent evidence. Record source
+  URLs/file paths, page/API locators and shared upstream provenance.
+  Separate numeric verification channels (e.g. filing vs Futu extraction) can
+  catch transcription errors even with one original filing; disclose that they
+  are not independent factual evidence for a business claim.
+  Validate all decision-critical inputs, with random sampling only as a supplement.
+  Audit FAIL or INCOMPLETE blocks verified/publication-ready claims. PASS only
+  means supplied sample values match, not that the full report is true.
+- **Recommendations:** distinguish observed facts, assumptions and judgments.
+  State scenario assumptions and evidence gaps. Without holdings, investment
+  horizon and risk limits, do not invent personalized position percentages;
+  give watch conditions or explicitly hypothetical examples. Do not force a
+  target price when current data or valuation assumptions are unsupported.
 
 # 投资研究：巴菲特-芒格-段永平-李录 四大师综合分析框架
 

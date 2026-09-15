@@ -16,19 +16,5 @@ if %ERRORLEVEL%==0 (
   set "PY=python"
 )
 
-%PY% "%ROOT%\scripts\sync-codex-skills.py"
-if errorlevel 1 exit /b %ERRORLEVEL%
-
-if not exist "%DEST%" mkdir "%DEST%"
-if errorlevel 1 exit /b %ERRORLEVEL%
-
-for /d %%D in ("%ROOT%\codex-skills\*") do (
-  if exist "%DEST%\%%~nxD" rmdir /s /q "%DEST%\%%~nxD"
-  if errorlevel 1 exit /b 1
-  xcopy "%%~fD" "%DEST%\%%~nxD\" /E /I /Y >nul
-  if errorlevel 1 exit /b 1
-)
-
-echo Installed Codex skills to %DEST%
-echo Run .\scripts\install-codex-prompts.bat if you want slash-command prompts.
-echo Restart Codex to pick up new skills.
+%PY% "%ROOT%\scripts\install-codex-skills.py" %*
+exit /b %ERRORLEVEL%

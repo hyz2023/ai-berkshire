@@ -54,7 +54,7 @@ class TestGbkConsoleSurvival(unittest.TestCase):
                      '--shares', '500000000', '--reported', '40.00',
                      '--currency', 'CNY'])
         self.assertEqual(
-            proc.returncode, 0,
+            proc.returncode, 1,
             "偏差超标告警路径在 GBK 控制台崩溃了：\n"
             + proc.stderr.decode('utf-8', 'replace')[-800:])
         self.assertNotIn(b'UnicodeEncodeError', proc.stderr)
@@ -67,7 +67,7 @@ class TestGbkConsoleSurvival(unittest.TestCase):
         proc = _run(['verify-market-cap', '--price', '8.00',
                      '--shares', '500000000', '--reported', '4120000000',
                      '--currency', 'CNY'])
-        self.assertEqual(proc.returncode, 0,
+        self.assertEqual(proc.returncode, 1,
                          proc.stderr.decode('utf-8', 'replace')[-800:])
         self.assertNotIn(b'UnicodeEncodeError', proc.stderr)
 
