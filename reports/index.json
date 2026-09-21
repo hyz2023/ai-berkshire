@@ -1,6 +1,50 @@
 {
-  "count": 2346,
+  "count": 2351,
   "reports": [
+    {
+      "title": "一个不说话的模型，六天里被测出了什么：拆 Jev",
+      "path": "reports/AI产业研究/公众号-Jev-一个不说话的模型六天里被测出了什么-20260921.md",
+      "bucket": "专题",
+      "group": "AI产业研究",
+      "series": "",
+      "type": "公众号",
+      "date": "2026-09-21",
+      "date_source": "文件名",
+      "ticker": ""
+    },
+    {
+      "title": "Jev 与\"决策模型\"品类：技术报告、商业评估与未来三年影响",
+      "path": "reports/AI产业研究/Jev与决策模型品类-技术报告与商业评估-20260921.md",
+      "bucket": "专题",
+      "group": "AI产业研究",
+      "series": "",
+      "type": "研究",
+      "date": "2026-09-21",
+      "date_source": "文件名",
+      "ticker": ""
+    },
+    {
+      "title": "曾鸣最新访谈：现在连浏览器都还没出现，模型公司不是终局赢家",
+      "path": "reports/曾鸣/曾鸣-公众号-20260920.md",
+      "bucket": "大师研究",
+      "group": "曾鸣",
+      "series": "",
+      "type": "公众号",
+      "date": "2026-09-20",
+      "date_source": "文件名",
+      "ticker": ""
+    },
+    {
+      "title": "基模变强之后：业务后训练的空间与算法工程师的去向",
+      "path": "reports/AI产业研究/业务后训练的剩余空间与算法工程师职能迁移-20260919.md",
+      "bucket": "专题",
+      "group": "AI产业研究",
+      "series": "",
+      "type": "研究",
+      "date": "2026-09-19",
+      "date_source": "文件名",
+      "ticker": ""
+    },
     {
       "title": "早期年度财务补录（用于重建长历史估值序列）",
       "path": "reports/持仓估值分位与未来盈利-20260912/早期年度财务补录.md",
@@ -1582,6 +1626,17 @@
       "series": "",
       "type": "研究",
       "date": "2026-09-04",
+      "date_source": "文件名",
+      "ticker": ""
+    },
+    {
+      "title": "曾鸣最新访谈原文整理：2026，像极了1995",
+      "path": "reports/曾鸣/曾鸣-张小珺访谈-原文整理-20260903.md",
+      "bucket": "大师研究",
+      "group": "曾鸣",
+      "series": "",
+      "type": "研究",
+      "date": "2026-09-03",
       "date_source": "文件名",
       "ticker": ""
     },
